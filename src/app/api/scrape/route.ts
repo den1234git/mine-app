@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { collection, addDoc } from "firebase/firestore";
+import { getDb } from "@/lib/firebase";
 import { runPipeline } from "@/lib/pipeline";
 import type { PipelineConfig } from "@/lib/pipeline";
 
@@ -37,15 +39,25 @@ export async function POST(req: Request) {
     const config: PipelineConfig = { ...DEFAULT_CONFIG, ...body };
     const result = await runPipeline(config);
 
-    // TODO: Write to Firestore when configured
-    // for (const ore of result.ores) {
-    //   await addDoc(collection(db, "ores"), ore);
-    // }
+    const db = getDb();
+    let saved = 0;
+    for (const ore of result.ores) {
+      await addDoc(collection(db, "ores"), {
+        body: ore.body,
+        tags: ore.tags,
+        companyNames: ore.companyNames,
+        empathyCount: 0,
+        source: ore.source,
+        createdAt: Date.now(),
+      });
+      saved++;
+    }
 
     return NextResponse.json({
       raw: result.raw,
       normalized: result.normalized,
       rejected: result.rejected,
+      saved,
       errors: result.errors,
       preview: result.ores.slice(0, 5).map((o) => ({
         body: o.body.slice(0, 100),

@@ -4,6 +4,7 @@ export interface Ore {
   tags: string[];
   companyNames: string[];
   empathyCount: number;
+  source?: string;
   createdAt: number;
-  authorId: string;
+  authorId?: string;
 }

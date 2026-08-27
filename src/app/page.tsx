@@ -14,8 +14,30 @@ function OreCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void
     onEmpathy(ore.id);
   };
 
+  const sourceLabel: Record<string, string> = {
+    appstore: "📱 App Store",
+    reddit: "💬 Reddit",
+    twitter: "🐦 X/Twitter",
+    chiebukuro: "❓ 知恵袋",
+    "5ch": "📝 5ch",
+  };
+
   return (
     <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+      {(ore.source || ore.companyNames.length > 0) && (
+        <div className="flex items-center gap-2 text-xs text-muted">
+          {ore.source && (
+            <span className="px-2 py-0.5 rounded-full bg-zinc-800">
+              {sourceLabel[ore.source] || ore.source}
+            </span>
+          )}
+          {ore.companyNames.map((name) => (
+            <span key={name} className="px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
+              🏢 {name}
+            </span>
+          ))}
+        </div>
+      )}
       <p className="text-base leading-relaxed whitespace-pre-wrap">{ore.body}</p>
       {ore.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -38,13 +60,6 @@ function OreCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void
         >
           👍 わかる {ore.empathyCount + (voted ? 1 : 0)}
         </button>
-        {ore.companyNames.length > 0 && (
-          <div className="flex gap-1.5">
-            {ore.companyNames.map((name) => (
-              <span key={name} className="text-xs text-muted">🏢 {name}</span>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
