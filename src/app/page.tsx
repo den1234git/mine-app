@@ -5,6 +5,14 @@ import { collection, query, orderBy, limit, getDocs, addDoc, doc, updateDoc, inc
 import { getDb } from "@/lib/firebase";
 import type { Ore } from "@/lib/types";
 
+const SOURCE_LABELS: Record<string, string> = {
+  appstore: "📱 App Store",
+  reddit: "💬 Reddit",
+  twitter: "🐦 X/Twitter",
+  chiebukuro: "❓ 知恵袋",
+  "5ch": "📝 5ch",
+};
+
 function OreCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void }) {
   const [voted, setVoted] = useState(false);
 
@@ -14,21 +22,13 @@ function OreCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void
     onEmpathy(ore.id);
   };
 
-  const sourceLabel: Record<string, string> = {
-    appstore: "📱 App Store",
-    reddit: "💬 Reddit",
-    twitter: "🐦 X/Twitter",
-    chiebukuro: "❓ 知恵袋",
-    "5ch": "📝 5ch",
-  };
-
   return (
     <div className="bg-card border border-border rounded-xl p-4 space-y-3">
       {(ore.source || ore.companyNames.length > 0) && (
         <div className="flex items-center gap-2 text-xs text-muted">
           {ore.source && (
             <span className="px-2 py-0.5 rounded-full bg-zinc-800">
-              {sourceLabel[ore.source] || ore.source}
+              {SOURCE_LABELS[ore.source] || ore.source}
             </span>
           )}
           {ore.companyNames.map((name) => (
@@ -130,15 +130,89 @@ function PostForm({ onPost }: { onPost: (body: string, tags: string) => Promise<
   );
 }
 
+type FilterMode = "all" | "source" | "company";
+
+function FilterTabs({
+  ores,
+  filter,
+  filterValue,
+  onFilter,
+}: {
+  ores: Ore[];
+  filter: FilterMode;
+  filterValue: string;
+  onFilter: (mode: FilterMode, value: string) => void;
+}) {
+  const sources = [...new Set(ores.map((o) => o.source).filter(Boolean))] as string[];
+  const companies = [...new Set(ores.flatMap((o) => o.companyNames))].filter(Boolean);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <button
+          onClick={() => onFilter("all", "")}
+          className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition-colors ${
+            filter === "all"
+              ? "bg-accent text-zinc-950 font-medium"
+              : "bg-zinc-800 text-muted hover:bg-zinc-700"
+          }`}
+        >
+          すべて ({ores.length})
+        </button>
+        {sources.map((s) => {
+          const count = ores.filter((o) => o.source === s).length;
+          const active = filter === "source" && filterValue === s;
+          return (
+            <button
+              key={s}
+              onClick={() => onFilter("source", s)}
+              className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition-colors ${
+                active
+                  ? "bg-accent text-zinc-950 font-medium"
+                  : "bg-zinc-800 text-muted hover:bg-zinc-700"
+              }`}
+            >
+              {SOURCE_LABELS[s] || s} ({count})
+            </button>
+          );
+        })}
+      </div>
+      {companies.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {companies.map((c) => {
+            const count = ores.filter((o) => o.companyNames.includes(c)).length;
+            const active = filter === "company" && filterValue === c;
+            return (
+              <button
+                key={c}
+                onClick={() => onFilter("company", active ? "" : c)}
+                className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition-colors ${
+                  active
+                    ? "bg-amber-400 text-zinc-950 font-medium"
+                    : "bg-amber-400/10 text-amber-400 hover:bg-amber-400/20"
+                }`}
+              >
+                🏢 {c} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [ores, setOres] = useState<Ore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterMode>("all");
+  const [filterValue, setFilterValue] = useState("");
 
   const fetchOres = useCallback(async () => {
     const isFirebaseConfigured = !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
     if (isFirebaseConfigured) {
       try {
-        const q = query(collection(getDb(), "ores"), orderBy("empathyCount", "desc"), limit(50));
+        const q = query(collection(getDb(), "ores"), orderBy("empathyCount", "desc"), limit(200));
         const snapshot = await getDocs(q);
         setOres(
           snapshot.docs.map((d) => ({
@@ -224,6 +298,23 @@ export default function Home() {
     }
   };
 
+  const handleFilter = (mode: FilterMode, value: string) => {
+    if (mode === "all") {
+      setFilter("all");
+      setFilterValue("");
+    } else {
+      setFilter(mode);
+      setFilterValue(value);
+    }
+  };
+
+  const filtered = ores.filter((o) => {
+    if (filter === "all") return true;
+    if (filter === "source") return o.source === filterValue;
+    if (filter === "company") return o.companyNames.includes(filterValue);
+    return true;
+  });
+
   return (
     <div className="space-y-4">
       <PostForm onPost={handlePost} />
@@ -238,11 +329,17 @@ export default function Home() {
       {loading ? (
         <div className="text-center text-muted py-12">掘削中...</div>
       ) : (
-        <div className="space-y-3">
-          {ores.map((ore) => (
-            <OreCard key={ore.id} ore={ore} onEmpathy={handleEmpathy} />
-          ))}
-        </div>
+        <>
+          <FilterTabs ores={ores} filter={filter} filterValue={filterValue} onFilter={handleFilter} />
+          <div className="space-y-3">
+            {filtered.map((ore) => (
+              <OreCard key={ore.id} ore={ore} onEmpathy={handleEmpathy} />
+            ))}
+            {filtered.length === 0 && (
+              <div className="text-center text-muted py-8">該当する原石がありません</div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
