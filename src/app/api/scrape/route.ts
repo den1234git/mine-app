@@ -10,15 +10,20 @@ const DEFAULT_CONFIG: PipelineConfig = {
       "1222370984",  // PayPay
       "1134232521",  // Mercari
       "443904275",   // LINE
+      "389801252",   // Instagram
+      "462141755",   // 楽天市場
+      "1103753401",  // Uber Eats
+      "1164276441",  // d払い
+      "1501631845",  // 楽天ペイ
+      "1568185800",  // マイナポータル
+      "1477376905",  // au PAY
     ],
     pages: 2,
   },
+  googleplay: {},
   reddit: {
     subreddits: ["mildlyinfuriating", "assholedesign", "CrappyDesign"],
     limit: 15,
-  },
-  twitter: {
-    maxResults: 10,
   },
   chiebukuro: {
     limit: 10,

@@ -10,6 +10,7 @@ const SOURCE_LABELS: Record<string, string> = {
   reddit: "💬 Reddit",
   twitter: "🐦 X/Twitter",
   chiebukuro: "❓ 知恵袋",
+  googleplay: "🤖 Google Play",
   "5ch": "📝 5ch",
 };
 

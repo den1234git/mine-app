@@ -13,6 +13,14 @@ const APP_ID_NAMES: Record<string, string> = {
   "462141755": "楽天市場",
   "1103753401": "Uber Eats",
   "1164276441": "d払い",
+  "1501631845": "楽天ペイ",
+  "348070227": "Evernote",
+  "1568185800": "マイナポータル",
+  "1520310065": "COCOA",
+  "529479190": "Yahoo!乗換案内",
+  "1585891498": "モバイルSuica",
+  "1217256498": "Slack",
+  "1477376905": "au PAY",
 };
 
 export async function scrapeAppStore(appId: string, pages = 3): Promise<ScraperResult> {

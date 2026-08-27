@@ -2,15 +2,19 @@ import type { RawComplaint, NormalizedOre } from "./types";
 
 const PERSONAL_NAME_PATTERN = /([A-Z][a-z]+\s[A-Z][a-z]+|[ぁ-ん]{1,4}[一-龥]{1,2}さん)/g;
 
-const COMPANY_PATTERNS = [
-  /Amazon/i, /Google/i, /Apple/i, /Microsoft/i, /楽天/i, /Yahoo/i,
-  /LINE/i, /メルカリ/i, /Uber/i, /Netflix/i, /Spotify/i,
-  /ドコモ/i, /au/i, /ソフトバンク/i, /NTT/i,
-  /三菱UFJ/i, /みずほ/i, /三井住友/i, /ゆうちょ/i,
-  /JR/i, /ANA/i, /JAL/i, /セブン/i, /ローソン/i, /ファミマ/i,
-  /Slack/i, /Zoom/i, /Teams/i, /Discord/i,
-  /Instagram/i, /TikTok/i, /Facebook/i, /Meta/i,
-  /PayPay/i, /Suica/i, /PASMO/i,
+const COMPANY_RULES: [RegExp, string][] = [
+  [/Amazon/i, "Amazon"], [/Google/i, "Google"], [/Apple/i, "Apple"],
+  [/Microsoft/i, "Microsoft"], [/楽天/i, "楽天"], [/Yahoo/i, "Yahoo"],
+  [/LINE/i, "LINE"], [/メルカリ/i, "メルカリ"], [/Uber/i, "Uber Eats"],
+  [/Netflix/i, "Netflix"], [/Spotify/i, "Spotify"],
+  [/ドコモ/i, "ドコモ"], [/\bau\b/i, "au"], [/ソフトバンク/i, "ソフトバンク"], [/NTT/i, "NTT"],
+  [/三菱UFJ/i, "三菱UFJ"], [/みずほ/i, "みずほ"], [/三井住友/i, "三井住友"], [/ゆうちょ/i, "ゆうちょ"],
+  [/JR/i, "JR"], [/ANA/i, "ANA"], [/JAL/i, "JAL"],
+  [/セブン/i, "セブン"], [/ローソン/i, "ローソン"], [/ファミマ/i, "ファミマ"],
+  [/Slack/i, "Slack"], [/Zoom/i, "Zoom"], [/Teams/i, "Teams"], [/Discord/i, "Discord"],
+  [/Instagram/i, "Instagram"], [/TikTok/i, "TikTok"], [/Facebook/i, "Facebook"], [/Meta/i, "Meta"],
+  [/PayPay/i, "PayPay"], [/Suica/i, "Suica"], [/PASMO/i, "PASMO"],
+  [/au PAY/i, "au PAY"], [/d払い/i, "d払い"], [/マイナポータル/i, "マイナポータル"],
 ];
 
 export function anonymize(text: string): string {
@@ -19,10 +23,9 @@ export function anonymize(text: string): string {
 
 export function extractCompanyNames(text: string): string[] {
   const found: string[] = [];
-  for (const pattern of COMPANY_PATTERNS) {
-    const match = text.match(pattern);
-    if (match) {
-      found.push(match[0]);
+  for (const [pattern, canonical] of COMPANY_RULES) {
+    if (pattern.test(text)) {
+      found.push(canonical);
     }
   }
   return [...new Set(found)];

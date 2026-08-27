@@ -1,5 +1,5 @@
 export interface RawComplaint {
-  source: "appstore" | "reddit" | "twitter" | "chiebukuro" | "5ch" | "manual";
+  source: "appstore" | "googleplay" | "reddit" | "twitter" | "chiebukuro" | "5ch" | "manual";
   sourceId: string;
   rawText: string;
   rating?: number;

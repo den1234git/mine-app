@@ -4,10 +4,12 @@ import { scrapeReddit } from "./scrapers/reddit";
 import { scrapeTwitter } from "./scrapers/twitter";
 import { scrapeChiebukuro } from "./scrapers/chiebukuro";
 import { scrape5ch } from "./scrapers/fivech";
+import { scrapeGooglePlay } from "./scrapers/googleplay";
 import type { RawComplaint, NormalizedOre } from "./types";
 
 export interface PipelineConfig {
   appstore?: { appIds: string[]; pages?: number };
+  googleplay?: { appIds?: string[] };
   reddit?: { subreddits?: string[]; limit?: number };
   twitter?: { queries?: string[]; maxResults?: number };
   chiebukuro?: { keywords?: string[]; limit?: number };
@@ -36,6 +38,14 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
           .catch((e) => { errors.push(`appstore:${appId}: ${e.message}`); })
       );
     }
+  }
+
+  if (config.googleplay) {
+    tasks.push(
+      scrapeGooglePlay(config.googleplay.appIds)
+        .then((r) => { allRaw.push(...r.complaints); })
+        .catch((e) => { errors.push(`googleplay: ${e.message}`); })
+    );
   }
 
   if (config.reddit) {
