@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { collection, query, orderBy, limit, getDocs, addDoc, doc, updateDoc, increment } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import type { Ore } from "@/lib/types";
@@ -14,6 +14,7 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 interface AppGroup {
+  key: string;
   name: string;
   ores: Ore[];
   totalEmpathy: number;
@@ -47,6 +48,7 @@ function buildGroups(ores: Ore[]): AppGroup[] {
         ? "その他"
         : key;
     groups.push({
+      key,
       name,
       ores: groupOres,
       totalEmpathy: groupOres.reduce((sum, o) => sum + o.empathyCount, 0),
@@ -58,7 +60,7 @@ function buildGroups(ores: Ore[]): AppGroup[] {
   return groups;
 }
 
-function OreItem({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void }) {
+function OreGridCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void }) {
   const [voted, setVoted] = useState(false);
 
   const handleEmpathy = () => {
@@ -68,13 +70,13 @@ function OreItem({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void
   };
 
   return (
-    <div className="border-t border-zinc-800 pt-3 space-y-2">
-      <p className="text-sm leading-relaxed whitespace-pre-wrap">{ore.body}</p>
-      <div className="flex items-center gap-2">
+    <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-between gap-3 min-h-[140px]">
+      <p className="text-sm leading-relaxed line-clamp-4">{ore.body}</p>
+      <div className="flex items-center justify-between gap-2 mt-auto">
         <button
           onClick={handleEmpathy}
           disabled={voted}
-          className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors ${
+          className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors shrink-0 ${
             voted
               ? "bg-amber-400/20 text-amber-400"
               : "bg-zinc-800 text-muted hover:bg-zinc-700 hover:text-foreground"
@@ -82,66 +84,11 @@ function OreItem({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void
         >
           👍 わかる {ore.empathyCount + (voted ? 1 : 0)}
         </button>
-        {ore.tags.length > 0 && ore.tags.slice(0, 3).map((tag) => (
-          <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-zinc-800/50 text-muted">
-            {tag}
+        {ore.tags.length > 0 && (
+          <span className="text-xs text-muted truncate">
+            {ore.tags.slice(0, 2).join(" / ")}
           </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AppCard({ group, onEmpathy }: { group: AppGroup; onEmpathy: (id: string) => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const preview = group.ores.slice(0, 2);
-  const rest = group.ores.slice(2);
-
-  return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full p-4 flex items-center justify-between text-left hover:bg-zinc-800/30 transition-colors"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center text-lg shrink-0">
-            {group.name === "その他" ? "📦" : "🏢"}
-          </div>
-          <div className="min-w-0">
-            <h3 className="font-medium text-base truncate">{group.name}</h3>
-            <div className="flex items-center gap-2 text-xs text-muted">
-              <span>{group.ores.length}件の不満</span>
-              {group.totalEmpathy > 0 && (
-                <span>👍 {group.totalEmpathy}</span>
-              )}
-              {group.sources.length > 0 && (
-                <span className="truncate">
-                  {group.sources.map((s) => SOURCE_LABELS[s] || s).join(" / ")}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <span className="text-muted text-lg shrink-0 ml-2">
-          {expanded ? "▲" : "▼"}
-        </span>
-      </button>
-
-      <div className="px-4 pb-4 space-y-3">
-        {preview.map((ore) => (
-          <OreItem key={ore.id} ore={ore} onEmpathy={onEmpathy} />
-        ))}
-        {rest.length > 0 && !expanded && (
-          <button
-            onClick={() => setExpanded(true)}
-            className="w-full text-center text-xs text-accent hover:text-amber-300 py-2"
-          >
-            他 {rest.length}件を表示
-          </button>
         )}
-        {expanded && rest.map((ore) => (
-          <OreItem key={ore.id} ore={ore} onEmpathy={onEmpathy} />
-        ))}
       </div>
     </div>
   );
@@ -215,6 +162,7 @@ function PostForm({ onPost }: { onPost: (body: string, tags: string) => Promise<
 export default function Home() {
   const [ores, setOres] = useState<Ore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTab, setSelectedTab] = useState<string | null>(null);
 
   const fetchOres = useCallback(async () => {
     const isFirebaseConfigured = !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -259,14 +207,22 @@ export default function Home() {
     fetchOres();
   }, [fetchOres]);
 
+  const groups = useMemo(() => buildGroups(ores), [ores]);
+
+  useEffect(() => {
+    if (groups.length > 0 && selectedTab === null) {
+      setSelectedTab(groups[0].key);
+    }
+  }, [groups, selectedTab]);
+
+  const activeGroup = groups.find((g) => g.key === selectedTab) || groups[0];
+
   const handlePost = async (body: string, tagsStr: string) => {
     const tags = tagsStr
       .split(/[,、]/)
       .map((t) => t.trim())
       .filter(Boolean);
-
     const companyNames: string[] = [];
-
     const ore = {
       body,
       tags,
@@ -274,7 +230,6 @@ export default function Home() {
       empathyCount: 0,
       createdAt: Date.now(),
     };
-
     try {
       const docRef = await addDoc(collection(getDb(), "ores"), ore);
       setOres((prev) => [{ ...ore, id: docRef.id }, ...prev]);
@@ -289,33 +244,80 @@ export default function Home() {
     );
     try {
       await updateDoc(doc(getDb(), "ores", id), { empathyCount: increment(1) });
-    } catch {
-      // offline or demo mode
-    }
+    } catch {}
   };
 
-  const groups = buildGroups(ores);
+  if (loading) {
+    return <div className="text-center text-muted py-12">掘削中...</div>;
+  }
 
   return (
     <div className="space-y-4">
       <PostForm onPost={handlePost} />
 
-      <div className="flex items-center gap-2 pt-2">
-        <span className="text-accent text-lg">⛏</span>
-        <h2 className="text-sm font-medium text-muted">
-          アプリ別 — 不満の多い順
-        </h2>
-      </div>
+      {/* Tab sidebar + grid layout */}
+      <div className="flex gap-4 min-h-[60vh]">
+        {/* Left: app tabs */}
+        <nav className="w-40 shrink-0 space-y-1 hidden sm:block">
+          <h2 className="text-xs font-medium text-muted px-3 py-2 uppercase tracking-wider">アプリ</h2>
+          {groups.map((g) => (
+            <button
+              key={g.key}
+              onClick={() => setSelectedTab(g.key)}
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                selectedTab === g.key
+                  ? "bg-accent text-zinc-950 font-medium"
+                  : "text-muted hover:bg-zinc-800 hover:text-foreground"
+              }`}
+            >
+              <div className="truncate">{g.name}</div>
+              <div className="text-xs opacity-70">{g.ores.length}件</div>
+            </button>
+          ))}
+        </nav>
 
-      {loading ? (
-        <div className="text-center text-muted py-12">掘削中...</div>
-      ) : (
-        <div className="space-y-4">
-          {groups.map((group) => (
-            <AppCard key={group.name} group={group} onEmpathy={handleEmpathy} />
+        {/* Mobile: horizontal tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-2 sm:hidden w-full">
+          {groups.map((g) => (
+            <button
+              key={g.key}
+              onClick={() => setSelectedTab(g.key)}
+              className={`shrink-0 px-3 py-2 rounded-lg text-sm transition-colors ${
+                selectedTab === g.key
+                  ? "bg-accent text-zinc-950 font-medium"
+                  : "bg-zinc-800 text-muted"
+              }`}
+            >
+              {g.name} ({g.ores.length})
+            </button>
           ))}
         </div>
-      )}
+
+        {/* Right: card grid */}
+        <div className="flex-1 min-w-0">
+          {activeGroup && (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-lg font-medium">{activeGroup.name}</h2>
+                <span className="text-xs text-muted">
+                  {activeGroup.ores.length}件の不満
+                  {activeGroup.totalEmpathy > 0 && ` · 👍 ${activeGroup.totalEmpathy}`}
+                </span>
+                {activeGroup.sources.length > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-muted">
+                    {activeGroup.sources.map((s) => SOURCE_LABELS[s] || s).join(" / ")}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {activeGroup.ores.map((ore) => (
+                  <OreGridCard key={ore.id} ore={ore} onEmpathy={handleEmpathy} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
