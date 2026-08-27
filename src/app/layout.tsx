@@ -22,9 +22,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <a href="/" className="text-xl font-bold tracking-tight">
               <span className="text-accent">⛏</span> Mine
             </a>
+            <nav className="flex gap-4 text-sm">
+              <a href="/" className="text-muted hover:text-foreground transition-colors">原石</a>
+              <a href="/dashboard" className="text-muted hover:text-foreground transition-colors">分析</a>
+            </nav>
           </div>
         </header>
-        <main className="max-w-2xl mx-auto w-full px-4 py-6 flex-1">
+        <main className="max-w-6xl mx-auto w-full px-4 py-6 flex-1">
           {children}
         </main>
       </body>
