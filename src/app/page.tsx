@@ -92,7 +92,7 @@ function OreGridCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => 
               : "bg-zinc-800 text-muted hover:bg-zinc-700 hover:text-foreground"
           }`}
         >
-          👍 わかる {ore.empathyCount + (voted ? 1 : 0)}
+          👍 わかる {ore.empathyCount}
         </button>
         {ore.tags.length > 0 && (
           <span className="text-xs text-muted truncate">
