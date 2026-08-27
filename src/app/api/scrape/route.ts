@@ -22,7 +22,10 @@ const DEFAULT_CONFIG: PipelineConfig = {
   },
   googleplay: {},
   reddit: {
-    subreddits: ["mildlyinfuriating", "assholedesign", "CrappyDesign"],
+    subreddits: [
+      "mildlyinfuriating", "assholedesign", "CrappyDesign",
+      "newsokuexp", "lowlevelaware", "BakaNewsJP",
+    ],
     limit: 15,
   },
   chiebukuro: {

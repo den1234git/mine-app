@@ -2,10 +2,14 @@ import * as cheerio from "cheerio";
 import type { RawComplaint, ScraperResult } from "../types";
 
 const SEARCH_KEYWORDS = [
-  "不便 改善してほしい",
-  "使いにくい なぜ",
-  "困っている アプリ",
-  "クソ仕様 サービス",
+  "イライラする 日常",
+  "なんでこんなに不便",
+  "理不尽 ルール",
+  "意味がわからない 制度",
+  "マナー悪い 迷惑",
+  "対応がひどい",
+  "待たされる ストレス",
+  "改善してほしい 生活",
 ];
 
 export async function scrapeChiebukuro(
@@ -16,21 +20,24 @@ export async function scrapeChiebukuro(
 
   for (const keyword of keywords) {
     try {
-      const url = `https://chiebukuro.yahoo.co.jp/search?p=${encodeURIComponent(keyword)}&flg=3&dnum=2078297830`;
+      const url = `https://chiebukuro.yahoo.co.jp/search?p=${encodeURIComponent(keyword)}&flg=3`;
       const res = await fetch(url, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Accept-Language": "ja,en;q=0.5",
         },
       });
       if (!res.ok) continue;
       const html = await res.text();
       const $ = cheerio.load(html);
 
-      $(".SearchResult__item").slice(0, limitPerKeyword).each((_, el) => {
-        const title = $(el).find(".SearchResult__title a").text().trim();
-        const body = $(el).find(".SearchResult__body").text().trim();
-        const href = $(el).find(".SearchResult__title a").attr("href") || "";
-        const text = body ? `${title}\n${body}` : title;
+      $("[class*='listSearchResults__listItem']").slice(0, limitPerKeyword).each((_, el) => {
+        const item = $(el);
+        const titleEl = item.find("[class*='listSearchResults__heading'] a");
+        const title = titleEl.text().trim();
+        const summary = item.find("[class*='listSearchResults__summary']").text().trim();
+        const href = titleEl.attr("href") || "";
+        const text = summary ? `${title}\n${summary}` : title;
 
         if (text.length < 10) return;
 
