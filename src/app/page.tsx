@@ -71,8 +71,8 @@ function OreGridCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => 
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between gap-4 min-h-[210px]">
-      <p className="text-base leading-relaxed line-clamp-6">{ore.body}</p>
+    <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between gap-4">
+      <p className="text-base leading-relaxed">{ore.body}</p>
       <div className="flex items-center justify-between gap-2 mt-auto">
         <button
           onClick={handleEmpathy}
