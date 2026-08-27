@@ -32,8 +32,8 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
     for (const appId of config.appstore.appIds) {
       tasks.push(
         scrapeAppStore(appId, config.appstore.pages)
-          .then((r) => allRaw.push(...r.complaints))
-          .catch((e) => errors.push(`appstore:${appId}: ${e.message}`))
+          .then((r) => { allRaw.push(...r.complaints); })
+          .catch((e) => { errors.push(`appstore:${appId}: ${e.message}`); })
       );
     }
   }
@@ -41,32 +41,32 @@ export async function runPipeline(config: PipelineConfig): Promise<PipelineResul
   if (config.reddit) {
     tasks.push(
       scrapeReddit(config.reddit.subreddits, config.reddit.limit)
-        .then((r) => allRaw.push(...r.complaints))
-        .catch((e) => errors.push(`reddit: ${e.message}`))
+        .then((r) => { allRaw.push(...r.complaints); })
+        .catch((e) => { errors.push(`reddit: ${e.message}`); })
     );
   }
 
   if (config.twitter) {
     tasks.push(
       scrapeTwitter(config.twitter.queries, config.twitter.maxResults)
-        .then((r) => allRaw.push(...r.complaints))
-        .catch((e) => errors.push(`twitter: ${e.message}`))
+        .then((r) => { allRaw.push(...r.complaints); })
+        .catch((e) => { errors.push(`twitter: ${e.message}`); })
     );
   }
 
   if (config.chiebukuro) {
     tasks.push(
       scrapeChiebukuro(config.chiebukuro.keywords, config.chiebukuro.limit)
-        .then((r) => allRaw.push(...r.complaints))
-        .catch((e) => errors.push(`chiebukuro: ${e.message}`))
+        .then((r) => { allRaw.push(...r.complaints); })
+        .catch((e) => { errors.push(`chiebukuro: ${e.message}`); })
     );
   }
 
   if (config.fivech) {
     tasks.push(
       scrape5ch(config.fivech.boards, config.fivech.limit)
-        .then((r) => allRaw.push(...r.complaints))
-        .catch((e) => errors.push(`5ch: ${e.message}`))
+        .then((r) => { allRaw.push(...r.complaints); })
+        .catch((e) => { errors.push(`5ch: ${e.message}`); })
     );
   }
 
