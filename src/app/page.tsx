@@ -71,8 +71,8 @@ function OreGridCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => 
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-between gap-3 min-h-[140px]">
-      <p className="text-sm leading-relaxed line-clamp-4">{ore.body}</p>
+    <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between gap-4 min-h-[210px]">
+      <p className="text-base leading-relaxed line-clamp-6">{ore.body}</p>
       <div className="flex items-center justify-between gap-2 mt-auto">
         <button
           onClick={handleEmpathy}
@@ -310,7 +310,7 @@ export default function Home() {
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {activeGroup.ores.map((ore) => (
                   <OreGridCard key={ore.id} ore={ore} onEmpathy={handleEmpathy} />
                 ))}
