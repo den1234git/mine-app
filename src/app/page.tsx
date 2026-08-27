@@ -13,7 +13,52 @@ const SOURCE_LABELS: Record<string, string> = {
   "5ch": "📝 5ch",
 };
 
-function OreCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void }) {
+interface AppGroup {
+  name: string;
+  ores: Ore[];
+  totalEmpathy: number;
+  sources: string[];
+}
+
+function buildGroups(ores: Ore[]): AppGroup[] {
+  const map = new Map<string, Ore[]>();
+
+  for (const ore of ores) {
+    if (ore.companyNames.length > 0) {
+      for (const name of ore.companyNames) {
+        const list = map.get(name) || [];
+        list.push(ore);
+        map.set(name, list);
+      }
+    } else {
+      const key = ore.source ? `__source__${ore.source}` : "__other__";
+      const list = map.get(key) || [];
+      list.push(ore);
+      map.set(key, list);
+    }
+  }
+
+  const groups: AppGroup[] = [];
+  for (const [key, groupOres] of map) {
+    const sources = [...new Set(groupOres.map((o) => o.source).filter(Boolean))] as string[];
+    const name = key.startsWith("__source__")
+      ? SOURCE_LABELS[key.replace("__source__", "")] || key.replace("__source__", "")
+      : key === "__other__"
+        ? "その他"
+        : key;
+    groups.push({
+      name,
+      ores: groupOres,
+      totalEmpathy: groupOres.reduce((sum, o) => sum + o.empathyCount, 0),
+      sources,
+    });
+  }
+
+  groups.sort((a, b) => b.ores.length - a.ores.length);
+  return groups;
+}
+
+function OreItem({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void }) {
   const [voted, setVoted] = useState(false);
 
   const handleEmpathy = () => {
@@ -23,36 +68,13 @@ function OreCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-      {(ore.source || ore.companyNames.length > 0) && (
-        <div className="flex items-center gap-2 text-xs text-muted">
-          {ore.source && (
-            <span className="px-2 py-0.5 rounded-full bg-zinc-800">
-              {SOURCE_LABELS[ore.source] || ore.source}
-            </span>
-          )}
-          {ore.companyNames.map((name) => (
-            <span key={name} className="px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
-              🏢 {name}
-            </span>
-          ))}
-        </div>
-      )}
-      <p className="text-base leading-relaxed whitespace-pre-wrap">{ore.body}</p>
-      {ore.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {ore.tags.map((tag) => (
-            <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-muted">
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="flex items-center justify-between pt-1">
+    <div className="border-t border-zinc-800 pt-3 space-y-2">
+      <p className="text-sm leading-relaxed whitespace-pre-wrap">{ore.body}</p>
+      <div className="flex items-center gap-2">
         <button
           onClick={handleEmpathy}
           disabled={voted}
-          className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full transition-colors ${
+          className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors ${
             voted
               ? "bg-amber-400/20 text-amber-400"
               : "bg-zinc-800 text-muted hover:bg-zinc-700 hover:text-foreground"
@@ -60,6 +82,66 @@ function OreCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void
         >
           👍 わかる {ore.empathyCount + (voted ? 1 : 0)}
         </button>
+        {ore.tags.length > 0 && ore.tags.slice(0, 3).map((tag) => (
+          <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-zinc-800/50 text-muted">
+            {tag}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AppCard({ group, onEmpathy }: { group: AppGroup; onEmpathy: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const preview = group.ores.slice(0, 2);
+  const rest = group.ores.slice(2);
+
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-4 flex items-center justify-between text-left hover:bg-zinc-800/30 transition-colors"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center text-lg shrink-0">
+            {group.name === "その他" ? "📦" : "🏢"}
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-medium text-base truncate">{group.name}</h3>
+            <div className="flex items-center gap-2 text-xs text-muted">
+              <span>{group.ores.length}件の不満</span>
+              {group.totalEmpathy > 0 && (
+                <span>👍 {group.totalEmpathy}</span>
+              )}
+              {group.sources.length > 0 && (
+                <span className="truncate">
+                  {group.sources.map((s) => SOURCE_LABELS[s] || s).join(" / ")}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <span className="text-muted text-lg shrink-0 ml-2">
+          {expanded ? "▲" : "▼"}
+        </span>
+      </button>
+
+      <div className="px-4 pb-4 space-y-3">
+        {preview.map((ore) => (
+          <OreItem key={ore.id} ore={ore} onEmpathy={onEmpathy} />
+        ))}
+        {rest.length > 0 && !expanded && (
+          <button
+            onClick={() => setExpanded(true)}
+            className="w-full text-center text-xs text-accent hover:text-amber-300 py-2"
+          >
+            他 {rest.length}件を表示
+          </button>
+        )}
+        {expanded && rest.map((ore) => (
+          <OreItem key={ore.id} ore={ore} onEmpathy={onEmpathy} />
+        ))}
       </div>
     </div>
   );
@@ -130,83 +212,9 @@ function PostForm({ onPost }: { onPost: (body: string, tags: string) => Promise<
   );
 }
 
-type FilterMode = "all" | "source" | "company";
-
-function FilterTabs({
-  ores,
-  filter,
-  filterValue,
-  onFilter,
-}: {
-  ores: Ore[];
-  filter: FilterMode;
-  filterValue: string;
-  onFilter: (mode: FilterMode, value: string) => void;
-}) {
-  const sources = [...new Set(ores.map((o) => o.source).filter(Boolean))] as string[];
-  const companies = [...new Set(ores.flatMap((o) => o.companyNames))].filter(Boolean);
-
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        <button
-          onClick={() => onFilter("all", "")}
-          className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition-colors ${
-            filter === "all"
-              ? "bg-accent text-zinc-950 font-medium"
-              : "bg-zinc-800 text-muted hover:bg-zinc-700"
-          }`}
-        >
-          すべて ({ores.length})
-        </button>
-        {sources.map((s) => {
-          const count = ores.filter((o) => o.source === s).length;
-          const active = filter === "source" && filterValue === s;
-          return (
-            <button
-              key={s}
-              onClick={() => onFilter("source", s)}
-              className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition-colors ${
-                active
-                  ? "bg-accent text-zinc-950 font-medium"
-                  : "bg-zinc-800 text-muted hover:bg-zinc-700"
-              }`}
-            >
-              {SOURCE_LABELS[s] || s} ({count})
-            </button>
-          );
-        })}
-      </div>
-      {companies.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {companies.map((c) => {
-            const count = ores.filter((o) => o.companyNames.includes(c)).length;
-            const active = filter === "company" && filterValue === c;
-            return (
-              <button
-                key={c}
-                onClick={() => onFilter("company", active ? "" : c)}
-                className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition-colors ${
-                  active
-                    ? "bg-amber-400 text-zinc-950 font-medium"
-                    : "bg-amber-400/10 text-amber-400 hover:bg-amber-400/20"
-                }`}
-              >
-                🏢 {c} ({count})
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function Home() {
   const [ores, setOres] = useState<Ore[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<FilterMode>("all");
-  const [filterValue, setFilterValue] = useState("");
 
   const fetchOres = useCallback(async () => {
     const isFirebaseConfigured = !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -227,34 +235,23 @@ export default function Home() {
       }
     }
     setOres([
-        {
-          id: "demo-1",
-          body: "Amazonの返品、理由選択が20個もあるのに「その他」を選ばないと自由記述できない。結局毎回「その他」。",
-          tags: ["UX", "EC"],
-          companyNames: ["Amazon"],
-          empathyCount: 42,
-          createdAt: Date.now(),
-          authorId: "demo",
-        },
-        {
-          id: "demo-2",
-          body: "銀行のワンタイムパスワードアプリ、機種変したら再登録に窓口行かないといけない。2024年にもなって。",
-          tags: ["銀行", "認証"],
-          companyNames: [],
-          empathyCount: 128,
-          createdAt: Date.now(),
-          authorId: "demo",
-        },
-        {
-          id: "demo-3",
-          body: "病院の予約、電話でしか取れないのに電話が永遠に繋がらない。Web予約あるのに初診は電話のみ。",
-          tags: ["医療", "予約"],
-          companyNames: [],
-          empathyCount: 89,
-          createdAt: Date.now(),
-          authorId: "demo",
-        },
-      ]);
+      {
+        id: "demo-1",
+        body: "Amazonの返品、理由選択が20個もあるのに「その他」を選ばないと自由記述できない。結局毎回「その他」。",
+        tags: ["UX", "EC"],
+        companyNames: ["Amazon"],
+        empathyCount: 42,
+        createdAt: Date.now(),
+      },
+      {
+        id: "demo-2",
+        body: "銀行のワンタイムパスワードアプリ、機種変したら再登録に窓口行かないといけない。2024年にもなって。",
+        tags: ["銀行", "認証"],
+        companyNames: [],
+        empathyCount: 128,
+        createdAt: Date.now(),
+      },
+    ]);
     setLoading(false);
   }, []);
 
@@ -276,7 +273,6 @@ export default function Home() {
       companyNames,
       empathyCount: 0,
       createdAt: Date.now(),
-      authorId: "anonymous",
     };
 
     try {
@@ -298,22 +294,7 @@ export default function Home() {
     }
   };
 
-  const handleFilter = (mode: FilterMode, value: string) => {
-    if (mode === "all") {
-      setFilter("all");
-      setFilterValue("");
-    } else {
-      setFilter(mode);
-      setFilterValue(value);
-    }
-  };
-
-  const filtered = ores.filter((o) => {
-    if (filter === "all") return true;
-    if (filter === "source") return o.source === filterValue;
-    if (filter === "company") return o.companyNames.includes(filterValue);
-    return true;
-  });
+  const groups = buildGroups(ores);
 
   return (
     <div className="space-y-4">
@@ -322,24 +303,18 @@ export default function Home() {
       <div className="flex items-center gap-2 pt-2">
         <span className="text-accent text-lg">⛏</span>
         <h2 className="text-sm font-medium text-muted">
-          原石 — 共感順
+          アプリ別 — 不満の多い順
         </h2>
       </div>
 
       {loading ? (
         <div className="text-center text-muted py-12">掘削中...</div>
       ) : (
-        <>
-          <FilterTabs ores={ores} filter={filter} filterValue={filterValue} onFilter={handleFilter} />
-          <div className="space-y-3">
-            {filtered.map((ore) => (
-              <OreCard key={ore.id} ore={ore} onEmpathy={handleEmpathy} />
-            ))}
-            {filtered.length === 0 && (
-              <div className="text-center text-muted py-8">該当する原石がありません</div>
-            )}
-          </div>
-        </>
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <AppCard key={group.name} group={group} onEmpathy={handleEmpathy} />
+          ))}
+        </div>
       )}
     </div>
   );

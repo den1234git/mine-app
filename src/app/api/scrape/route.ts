@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 import { runPipeline } from "@/lib/pipeline";
 import type { PipelineConfig } from "@/lib/pipeline";
@@ -41,7 +41,13 @@ export async function POST(req: Request) {
 
     const db = getDb();
     let saved = 0;
+    let skipped = 0;
     for (const ore of result.ores) {
+      const existing = await getDocs(query(collection(db, "ores"), where("body", "==", ore.body)));
+      if (!existing.empty) {
+        skipped++;
+        continue;
+      }
       await addDoc(collection(db, "ores"), {
         body: ore.body,
         tags: ore.tags,
@@ -58,6 +64,7 @@ export async function POST(req: Request) {
       normalized: result.normalized,
       rejected: result.rejected,
       saved,
+      skipped,
       errors: result.errors,
       preview: result.ores.slice(0, 5).map((o) => ({
         body: o.body.slice(0, 100),
