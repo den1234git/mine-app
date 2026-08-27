@@ -63,6 +63,8 @@ function buildGroups(ores: Ore[]): AppGroup[] {
 
 function OreGridCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => void }) {
   const [voted, setVoted] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const isLong = ore.body.length > 120;
 
   const handleEmpathy = () => {
     if (voted) return;
@@ -71,8 +73,15 @@ function OreGridCard({ ore, onEmpathy }: { ore: Ore; onEmpathy: (id: string) => 
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between gap-4">
-      <p className="text-base leading-relaxed">{ore.body}</p>
+    <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between gap-4 min-h-[180px]">
+      <div>
+        <p className={`text-base leading-relaxed ${!expanded && isLong ? "line-clamp-4" : ""}`}>{ore.body}</p>
+        {isLong && !expanded && (
+          <button onClick={() => setExpanded(true)} className="text-xs text-accent hover:text-amber-300 mt-1">
+            続きを読む
+          </button>
+        )}
+      </div>
       <div className="flex items-center justify-between gap-2 mt-auto">
         <button
           onClick={handleEmpathy}
